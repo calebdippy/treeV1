@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tree Visualization Tool</title>
+    <style>
+        canvas {
+            border: 1px solid black; 
+        }
+    </style
+</head>
+<body>
+    <input type="file" id="imageInput" />
+    <button id="generateButton">Generate Trees</button>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        let image = new Image();
+
+        imageInput.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                image.src = e.target.result;
+                image.onload = function () {
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                    context.drawImage(image, 0, 0);
+                }
+            }
+            reader.readAsDataURL(file);
+        });
+
+        let drawing = false;
+        canvas.addEventListener('mousedown', () => drawing = true);
+        canvas.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('mousemove', draw);
+
+        function draw(event) {
+            if (!drawing) return;
+            context.lineWidth = 10;
+            context.lineCap = 'round';
+            context.strokeStyle = 'blue';
+
+            context.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+            context.stroke();
+            context.beginPath();
+            context.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+        }
+
+        document.getElementById('generateButton').addEventListener('click', function () {
+            // Send image and drawing to the backend for processing
+            const dataURL = canvas.toDataURL();
+            fetch('/generate-trees', {
+                method: 'POST',
+                body: JSON.stringify({ image: dataURL }),
+                headers: { 'Content-Type': 'application/json' }
+            }).then(response => response.json()).then(data => {
+                // Process and display the result
+                const resultImage = new Image();
+                resultImage.src = data.result;
+                resultImage.onload = function () {
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.drawImage(resultImage, 0, 0);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
